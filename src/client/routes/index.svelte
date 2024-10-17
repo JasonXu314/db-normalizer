@@ -2,6 +2,8 @@
 	import { Workbook } from 'exceljs';
 	import { type ChangeEventHandler } from 'svelte/elements';
 	import DataTable from '../components/DataTable.svelte';
+	import { normalize } from '../utils/normalizations';
+	import { Table } from '../utils/Table';
 	import { getCells, getRows, isTableCell } from '../utils/utils';
 
 	let tableNominees: NF0Table[] | null = null,
@@ -55,7 +57,7 @@
 									if (ex === -1) ex = row.length;
 									explored = ex;
 
-									const table: NF0Table = { cols: {}, names: [], sr: i, sc: sx, length: 0 };
+									const table: NF0Table = new Table([], {}, 0, i, sx, []);
 
 									for (let j = sx; j < ex; j++) {
 										const val = row[j].value;
@@ -141,6 +143,8 @@
 
 {#if startingTable}
 	<DataTable table={startingTable} />
+
+	<button on:click={() => console.log(normalize([startingTable], [], '1NF'))}>1NF Normalization</button>
 {/if}
 
 <dialog open={tableNominees !== null}>
