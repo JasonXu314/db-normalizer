@@ -6,10 +6,12 @@
 	$: {
 		if (typeof window !== 'undefined') {
 			const span = document.createElement('span');
+			span.style.fontFamily = 'system-ui, "Segoe UI", Roboto, Helvetica, Arial';
+			span.style.fontSize = '0.8rem';
 			span.textContent = value;
 
 			document.body.appendChild(span);
-			width = Math.max(span.offsetWidth, 24);
+			width = Math.max(span.getBoundingClientRect().width + 2, 24);
 			span.remove();
 		}
 	}

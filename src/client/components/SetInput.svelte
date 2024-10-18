@@ -15,6 +15,7 @@
 				,<SubtleInput bind:value={value[i + 1]} />
 			</span>
 		{/each}
+		<span class="plus-comma">,</span>
 	{/if}
 	<button class="subtle-button" on:click={() => (value = value.concat(''))}>+</button>
 	&rbrace;
@@ -23,9 +24,11 @@
 <style>
 	.main {
 		width: fit-content;
-		line-height: 1rem;
-		font-size: 1rem;
-		margin-bottom: 0.5rem;
+		font-size: 1.2rem;
+	}
+
+	.main + :global(*) {
+		margin-top: 0.5rem;
 	}
 
 	.subtle-button {
@@ -36,9 +39,14 @@
 		box-sizing: content-box;
 		margin: 0;
 		line-height: 0.8rem;
+		margin-top: 0.5rem;
 	}
 
-	.main:hover .subtle-button {
+	.plus-comma {
+		display: none;
+	}
+
+	.main:hover :is(.subtle-button, .plus-comma) {
 		display: block;
 	}
 </style>
