@@ -13,6 +13,8 @@ export function normalize(tables: ITable<any>[], fds: FD[], to: NF): ITable<any>
 			return normalize1NF(tables, fds);
 		case '3NF':
 			return normalize3NF(tables, fds);
+		case 'BCNF':
+			return normalizeBCNF(tables, fds);
 	}
 }
 
@@ -64,6 +66,44 @@ export function normalize3NF(tables: NF2Table[], fds: FD[]): NF3Table[] {
 
 				const seen: string[] = [];
 				const newTable: NF3Table = new Table(newCols, {}, 0, -1, -1, fd.determinant.slice());
+
+				for (let i = 0; i < table.length; i++) {
+					const tuple = table.get(i);
+					const determinant = JSON.stringify(fd.determinant.map((col) => tuple[col]));
+
+					if (!seen.includes(determinant)) {
+						const newTuple = Object.fromEntries(newCols.map((key) => [key, tuple[key]]));
+
+						newTable.insert([newTuple]);
+						seen.push(determinant);
+					}
+				}
+
+				tables.push(newTable);
+			}
+		});
+	});
+
+	return out;
+}
+
+export function normalizeBCNF(tables: NF2Table[] | NF3Table[], fds: FD[]): NF3Table[] {
+	const out: BCNFTable[] = [];
+
+	tables.forEach((t) => {
+		const table = t.clone();
+		out.push(table);
+
+		fds.forEach((fd) => {
+			if (
+				fd.determinant.some((col) => table.names.includes(col) && !table.pkey.includes(col)) &&
+				fd.dependent.some((col) => table.names.includes(col))
+			) {
+				const toRemove = fd.dependent.filter((col) => table.names.includes(col));
+				const newCols = fd.determinant.concat(toRemove);
+
+				const seen: string[] = [];
+				const newTable: BCNFTable = new Table(newCols, {}, 0, -1, -1, fd.determinant.slice());
 
 				for (let i = 0; i < table.length; i++) {
 					const tuple = table.get(i);
