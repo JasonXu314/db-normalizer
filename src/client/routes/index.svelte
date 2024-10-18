@@ -2,6 +2,7 @@
 	import { Workbook } from 'exceljs';
 	import { type ChangeEventHandler } from 'svelte/elements';
 	import DataTable from '../components/DataTable.svelte';
+	import FDInput from '../components/FDInput.svelte';
 	import SetInput from '../components/SetInput.svelte';
 	import { normalize } from '../utils/normalizations';
 	import { Table } from '../utils/Table';
@@ -9,7 +10,8 @@
 
 	let tableNominees: NF0Table[] | null = null,
 		startingTable: NF0Table | null = null,
-		error: string | null = null;
+		error: string | null = null,
+		fds: FD[] = [];
 
 	const readFile: ChangeEventHandler<HTMLInputElement> = (evt) => {
 		const files = (evt.target as HTMLInputElement).files;
@@ -149,6 +151,14 @@
 {#if startingTable}
 	<DataTable table={startingTable} />
 
+	<div class="fds">
+		<h2>Input FDs</h2>
+		{#each fds as fd}
+			<FDInput bind:fd />
+		{/each}
+		<button on:click={() => (fds = [...fds, { dependent: [], determinant: [] }])}>Add FD</button>
+	</div>
+
 	<button on:click={() => console.log(normalize([startingTable], [], '1NF'))}>1NF Normalization</button>
 {/if}
 
@@ -191,5 +201,9 @@
 
 	.table-choice .row {
 		align-items: center;
+	}
+
+	.fds {
+		margin-bottom: 0.5rem;
 	}
 </style>
