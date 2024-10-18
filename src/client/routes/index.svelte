@@ -2,6 +2,7 @@
 	import { Workbook } from 'exceljs';
 	import { type ChangeEventHandler } from 'svelte/elements';
 	import DataTable from '../components/DataTable.svelte';
+	import SetInput from '../components/SetInput.svelte';
 	import { normalize } from '../utils/normalizations';
 	import { Table } from '../utils/Table';
 	import { getCells, getRows, isTableCell } from '../utils/utils';
@@ -132,7 +133,11 @@
 
 	function selectTable(): void {
 		if (tableNominees && startingTable) {
-			tableNominees = null;
+			if (startingTable.pkey.length > 0) {
+				tableNominees = null;
+			} else {
+				error = 'Primary key must have at least 1 attribute';
+			}
 		} else {
 			error = 'Select a starting table';
 		}
@@ -161,6 +166,10 @@
 					</div>
 				</label>
 			{/each}
+		{/if}
+
+		{#if startingTable}
+			Primary Key: <SetInput bind:value={startingTable.pkey} />
 		{/if}
 
 		{#if error !== null}
