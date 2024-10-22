@@ -11,6 +11,7 @@
 		startingTable: NF0Table | null = null,
 		error: string | null = null,
 		fds: FD[] = [],
+		mvds: FD[] = [],
 		normalizedTables: NF1Table[] | null = null,
 		viewIdx: number = 0;
 
@@ -61,22 +62,31 @@
 {#if startingTable}
 	<DataTable table={startingTable} />
 
-	<div class="fds">
-		<h2>Input FDs</h2>
-		{#each fds as fd}
-			<FDInput bind:fd />
-		{/each}
-		<button on:click={() => (fds = [...fds, { dependent: [], determinant: [] }])}>Add FD</button>
+	<div class="deps row">
+		<div class="fds">
+			<h2>Input FDs</h2>
+			{#each fds as fd}
+				<FDInput bind:fd />
+			{/each}
+			<button on:click={() => (fds = [...fds, { dependent: [''], determinant: [''] }])}>Add FD</button>
+		</div>
+		<div class="mvds">
+			<h2>Input MVDs</h2>
+			{#each mvds as fd}
+				<FDInput bind:fd mvd />
+			{/each}
+			<button on:click={() => (mvds = [...mvds, { dependent: [''], determinant: [''] }])}>Add MVD</button>
+		</div>
 	</div>
 
-	<div class="row">
+	<div class="btns row">
 		{#if normalizedTables !== null}
 			<button on:click={() => ((normalizedTables = null), (viewIdx = 0))}>Clear</button>
 		{:else}
-			<button on:click={() => (normalizedTables = normalize([startingTable], [], '1NF'))}>1NF Normalization</button>
-			<button on:click={() => (normalizedTables = normalize([startingTable], [], '2NF'))}>2NF Normalization</button>
-			<button on:click={() => (normalizedTables = normalize([startingTable], [], '3NF'))}>3NF Normalization</button>
-			<button on:click={() => (normalizedTables = normalize([startingTable], [], 'BCNF'))}>BCNF Normalization</button>
+			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '1NF'))}>1NF Normalization</button>
+			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '2NF'))}>2NF Normalization</button>
+			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '3NF'))}>3NF Normalization</button>
+			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, 'BCNF'))}>BCNF Normalization</button>
 		{/if}
 	</div>
 	{#if normalizedTables !== null}
@@ -130,8 +140,12 @@
 		align-items: center;
 	}
 
-	.fds {
+	.deps {
 		margin-bottom: 0.5rem;
+	}
+
+	.btns {
+		gap: 1em;
 	}
 
 	.controls button:not(:first-child):not(:last-child) {

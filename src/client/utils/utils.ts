@@ -49,7 +49,7 @@ export function readSheet(sheet: Worksheet): NF0Table[] {
 					if (ex === -1) ex = row.length;
 					explored = ex;
 
-					const table: NF0Table = new Table([], {}, 0, i, sx, []);
+					const table: NF0Table = new Table([], {}, 0, i, sx, ['']);
 
 					for (let j = sx; j < ex; j++) {
 						const val = row[j].value;
@@ -127,6 +127,20 @@ export function resolveTransitive(fd: FD, fds: FD[], terminals: string[]): FD {
 			}
 		} else {
 			out.determinant.push(det);
+		}
+	}
+
+	return out;
+}
+
+export function filterRedundant<T>(tables: ITable<T>[]): ITable<T>[] {
+	const out: ITable<T>[] = [];
+
+	for (let i = 0; i < out.length - 1; i++) {
+		for (let j = i + 1; j < out.length; j++) {
+			if (tables[j].pkey.every((key) => tables[i].pkey.includes(key))) {
+				tables.splice(j, 1);
+			}
 		}
 	}
 
