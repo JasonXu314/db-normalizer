@@ -2,17 +2,27 @@
 	import SubtleInput from './SubtleInput.svelte';
 
 	export let value: string[];
+
+	const checkComma: (idx: number) => (evt: InputEvent) => void = (idx: number) => {
+		return (evt: InputEvent) => {
+			if (evt.data === ',') {
+				evt.preventDefault();
+				value = value.concat('');
+				value[idx] = value[idx].slice(0, -1);
+			}
+		};
+	};
 </script>
 
 <div class="row main">
 	&lbrace;
 	{#if value.length > 0}
 		<span>
-			<SubtleInput bind:value={value[0]} />
+			<SubtleInput bind:value={value[0]} on:input={checkComma(0)} />
 		</span>
 		{#each new Array(value.length - 1) as _, i}
 			<span>
-				,<SubtleInput bind:value={value[i + 1]} />
+				,<SubtleInput bind:value={value[i + 1]} on:input={checkComma(i + 1)} />
 			</span>
 		{/each}
 		<span class="plus-comma">,</span>

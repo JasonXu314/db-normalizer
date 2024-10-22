@@ -111,3 +111,25 @@ export function readSheet(sheet: Worksheet): NF0Table[] {
 	return tables;
 }
 
+export function resolveTransitive(fd: FD, fds: FD[], terminals: string[]): FD {
+	const out: FD = { dependent: fd.dependent.slice(), determinant: [] };
+
+	for (const det of fd.determinant) {
+		if (!terminals.includes(det)) {
+			const detFD = fds.find((fd) => fd.dependent.includes(det));
+
+			if (detFD) {
+				const resolvedFD = resolveTransitive({ dependent: [det], determinant: detFD.determinant }, fds, terminals);
+
+				resolvedFD.determinant.forEach((col) => out.determinant.push(col));
+			} else {
+				out.determinant.push(det);
+			}
+		} else {
+			out.determinant.push(det);
+		}
+	}
+
+	return out;
+}
+

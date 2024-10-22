@@ -17,7 +17,7 @@
 	}
 </script>
 
-<input type="text" bind:value style="width: {width}px;" />
+<input type="text" bind:value style="width: {width}px;" on:input />
 
 <style>
 	input {

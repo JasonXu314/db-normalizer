@@ -10,7 +10,9 @@
 	let tableNominees: NF0Table[] | null = null,
 		startingTable: NF0Table | null = null,
 		error: string | null = null,
-		fds: FD[] = [];
+		fds: FD[] = [],
+		normalizedTables: NF1Table[] | null = null,
+		viewIdx: number = 0;
 
 	const readFile: ChangeEventHandler<HTMLInputElement> = (evt) => {
 		const files = (evt.target as HTMLInputElement).files;
@@ -40,7 +42,11 @@
 	function selectTable(): void {
 		if (tableNominees && startingTable) {
 			if (startingTable.pkey.length > 0) {
-				tableNominees = null;
+				if (startingTable.pkey.every((key) => startingTable.names.includes(key))) {
+					tableNominees = null;
+				} else {
+					error = 'One or more primary keys do not exist in the table';
+				}
 			} else {
 				error = 'Primary key must have at least 1 attribute';
 			}
@@ -63,7 +69,24 @@
 		<button on:click={() => (fds = [...fds, { dependent: [], determinant: [] }])}>Add FD</button>
 	</div>
 
-	<button on:click={() => console.log(normalize([startingTable], [], '1NF'))}>1NF Normalization</button>
+	<div class="row">
+		{#if normalizedTables !== null}
+			<button on:click={() => ((normalizedTables = null), (viewIdx = 0))}>Clear</button>
+		{:else}
+			<button on:click={() => (normalizedTables = normalize([startingTable], [], '1NF'))}>1NF Normalization</button>
+			<button on:click={() => (normalizedTables = normalize([startingTable], [], '2NF'))}>2NF Normalization</button>
+			<button on:click={() => (normalizedTables = normalize([startingTable], [], '3NF'))}>3NF Normalization</button>
+			<button on:click={() => (normalizedTables = normalize([startingTable], [], 'BCNF'))}>BCNF Normalization</button>
+		{/if}
+	</div>
+	{#if normalizedTables !== null}
+		<div class="controls row">
+			{#each normalizedTables as _, i}
+				<button on:click={() => (viewIdx = i)}>Table {i + 1}</button>
+			{/each}
+		</div>
+		<DataTable table={normalizedTables[viewIdx]} />
+	{/if}
 {/if}
 
 <dialog open={tableNominees !== null}>
@@ -109,5 +132,21 @@
 
 	.fds {
 		margin-bottom: 0.5rem;
+	}
+
+	.controls button:not(:first-child):not(:last-child) {
+		border-radius: 0;
+	}
+
+	.controls button:first-child {
+		border-bottom-left-radius: 0;
+		border-bottom-right-radius: 0;
+		border-top-right-radius: 0;
+	}
+
+	.controls button:last-child {
+		border-bottom-left-radius: 0;
+		border-bottom-right-radius: 0;
+		border-top-left-radius: 0;
 	}
 </style>

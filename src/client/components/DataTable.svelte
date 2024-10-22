@@ -7,7 +7,7 @@
 		<thead>
 			<tr>
 				{#each table.names as colName}
-					<th scope="col">{colName}</th>
+					<th scope="col" class:pkey={table.pkey.includes(colName)}>{colName}</th>
 				{/each}
 			</tr>
 		</thead>
@@ -44,5 +44,9 @@
 
 	td {
 		white-space: nowrap;
+	}
+
+	th.pkey {
+		text-decoration: underline;
 	}
 </style>

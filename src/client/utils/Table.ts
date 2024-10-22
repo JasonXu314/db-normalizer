@@ -25,6 +25,10 @@ export class Table<Data> implements ITable<Data> {
 		return Object.fromEntries(this.names.map((colName) => [colName, this.cols[colName][i]]));
 	}
 
+	public remove(i: number): void {
+		this.names.forEach((colName) => this.cols[colName].splice(i, 1));
+	}
+
 	public replace(i: number, tuples: Record<string, Data>[]): void {
 		for (const colName of this.names) {
 			this.cols[colName].splice(i, 1, ...tuples.map((tuple) => tuple[colName]));
@@ -55,6 +59,16 @@ export class Table<Data> implements ITable<Data> {
 	public addKeyCol(name: string, values: Data[]): void {
 		this.addCol(name, values);
 		this.pkey.push(name);
+	}
+
+	public crunch(): void {
+		for (let i = 0; i < this.length - 1; i++) {
+			for (let j = i + 1; j < this.length; j++) {
+				if (this.pkey.every((colName) => this.cols[colName][i] === this.cols[colName][j])) {
+					this.remove(j);
+				}
+			}
+		}
 	}
 }
 
