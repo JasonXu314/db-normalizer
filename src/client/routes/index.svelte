@@ -149,6 +149,8 @@
 				return [fd];
 			});
 	}
+
+	$: console.log(normalizedTables);
 </script>
 
 <svelte:head>
@@ -182,11 +184,12 @@
 		{#if normalizedTables !== null}
 			<button on:click={() => ((normalizedTables = null), (viewIdx = 0))}>Clear</button>
 		{:else}
-			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '1NF'))}>1NF Normalization</button>
-			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '2NF'))}>2NF Normalization</button>
-			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '3NF'))}>3NF Normalization</button>
-			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, 'BCNF'))}>BCNF Normalization</button>
-			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '5NF'))}>5NF Normalization</button>
+			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '1NF'))}>1NF</button>
+			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '2NF'))}>2NF</button>
+			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '3NF'))}>3NF</button>
+			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, 'BCNF'))}>BCNF</button>
+			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '4NF'))}>4NF</button>
+			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '5NF'))}>5NF</button>
 		{/if}
 	</div>
 	{#if normalizedTables !== null}

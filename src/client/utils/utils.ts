@@ -140,10 +140,11 @@ export function resolveTransitive(fd: FD, fds: FD[], terminals: string[]): FD {
 export function filterRedundant<T>(tables: ITable<T>[]): ITable<T>[] {
 	const out: ITable<T>[] = [];
 
-	tables.forEach((table) => {
+	tables.forEach((table, i) => {
 		if (
-			!out.some(
-				(t) =>
+			!tables.some(
+				(t, j) =>
+					i !== j &&
 					table.pkey.every((key) => t.pkey.includes(key)) &&
 					table.names.filter((col) => !table.pkey.includes(col)).every((col) => t.names.includes(col))
 			)
@@ -163,7 +164,7 @@ export function join<T>(a: ITable<T>, b: ITable<T>): ITable<T> {
 	const intersection = a.names.filter((col) => b.names.includes(col));
 	const union = Array.from(cols);
 
-	const newTable = new Table<T>(union.slice(), {}, 0, -1, -1, union.slice());
+	const newTable = new Table<T>(union.slice(), Object.fromEntries(union.map((col) => [col, []])), 0, -1, -1, union.slice());
 
 	for (let i = 0; i < a.length; i++) {
 		const aTuple = a.get(i);
@@ -190,6 +191,22 @@ export function comb<T>(elems: T[]): T[][] {
 		const combs = comb(elems.slice(1));
 
 		return combs.concat(combs.map((comb) => [elems[0], ...comb]));
+	}
+}
+
+export function partition<T>(elems: T[]): [T[], T[]][] {
+	if (elems.length === 1) {
+		return [
+			[[elems[0]], []],
+			[[], [elems[0]]]
+		];
+	} else {
+		const partitions = partition(elems.slice(1));
+
+		return partitions.flatMap(([a, b]) => [
+			[[elems[0], ...a], [...b]],
+			[[...a], [elems[0], ...b]]
+		]);
 	}
 }
 

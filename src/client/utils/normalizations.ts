@@ -1,5 +1,5 @@
 import { Table } from './Table';
-import { comb, filterRedundant, resolveTransitive } from './utils';
+import { comb, filterRedundant, join, partition, resolveTransitive } from './utils';
 
 export type NF = '1NF' | '2NF' | '3NF' | 'BCNF' | '4NF' | '5NF';
 
@@ -63,6 +63,7 @@ export function normalize2NF(tables: NF1Table[], fds: FD[], _: FD[]): NF2Table[]
 
 	tables.forEach((t) => {
 		const table = t.clone();
+		out.push(table);
 
 		fds.forEach((fd) => {
 			const resolvedFD = resolveTransitive(fd, fds, table.names);
@@ -88,7 +89,6 @@ export function normalize2NF(tables: NF1Table[], fds: FD[], _: FD[]): NF2Table[]
 				newTable.crunch();
 				out.push(newTable);
 				resolvedFD.dependent.filter((col) => table.names.includes(col)).forEach((col) => table.removeCol(col));
-				console.log(newTable, table);
 			}
 		});
 	});
@@ -129,7 +129,7 @@ export function normalize3NF(tables: NF2Table[], fds: FD[], _: FD[]): NF3Table[]
 
 				newTable.crunch();
 				toRemove.forEach((col) => table.removeCol(col));
-				tables.push(newTable);
+				out.push(newTable);
 			}
 		});
 	});
@@ -170,7 +170,7 @@ export function normalizeBCNF(tables: NF2Table[] | NF3Table[], fds: FD[], _: FD[
 
 				newTable.crunch();
 				toRemove.forEach((col) => table.removeCol(col));
-				tables.push(newTable);
+				out.push(newTable);
 			}
 		});
 	});
@@ -214,7 +214,7 @@ export function normalize4NF(tables: BCNFTable[], _: FD[], mvds: FD[]): NF4Table
 
 				newTable.crunch();
 				toRemove.forEach((col) => table.removeCol(col));
-				tables.push(newTable);
+				out.push(newTable);
 			}
 		});
 	});
@@ -227,9 +227,62 @@ export function normalize5NF(tables: BCNFTable[], _: FD[], __: FD[]): NF4Table[]
 
 	tables.forEach((t) => {
 		const table = t.clone();
-		out.push(table);
 
-		console.log(table.names, comb(table.names));
+		for (const common of comb(table.names)) {
+			if (table.names.length - common.length >= 2) {
+				const remaining = table.names.filter((col) => !common.includes(col));
+
+				for (const [a, b] of partition(remaining)) {
+					const aTable = new Table(common.concat(a), Object.fromEntries(common.concat(a).map((col) => [col, []])), 0, -1, -1, common.slice());
+					const bTable = new Table(common.concat(b), Object.fromEntries(common.concat(b).map((col) => [col, []])), 0, -1, -1, common.slice());
+
+					for (let i = 0; i < table.length; i++) {
+						const tuple = table.get(i);
+
+						const aTuple = Object.fromEntries(aTable.names.map((col) => [col, tuple[col]]));
+						const bTuple = Object.fromEntries(bTable.names.map((col) => [col, tuple[col]]));
+
+						aTable.insert([aTuple]);
+						bTable.insert([bTuple]);
+					}
+
+					aTable.crunch();
+					bTable.crunch();
+
+					const joined = join(aTable, bTable);
+
+					if (joined.length === table.length) {
+						let match = true;
+
+						for (let i = 0; i < joined.length; i++) {
+							const joinedTuple = joined.get(i);
+							let found = false;
+
+							for (let j = 0; j < joined.length; j++) {
+								const originalTuple = table.get(j);
+
+								if (table.names.every((col) => joinedTuple[col] === originalTuple[col])) {
+									found = true;
+									break;
+								}
+							}
+
+							if (!found) {
+								match = false;
+								break;
+							}
+						}
+
+						if (match) {
+							out.push(aTable, bTable);
+							return;
+						}
+					}
+				}
+			}
+		}
+
+		out.push(table);
 	});
 
 	return out;
