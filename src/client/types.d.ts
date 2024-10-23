@@ -24,6 +24,7 @@ type NF2Table = ITable<DBPrimitive>;
 type NF3Table = ITable<DBPrimitive>;
 type BCNFTable = ITable<DBPrimitive>;
 type NF4Table = ITable<DBPrimitive>;
+type NF5Table = ITable<DBPrimitive>;
 
 interface FD {
 	determinant: string[];

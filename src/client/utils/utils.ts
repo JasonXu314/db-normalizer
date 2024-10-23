@@ -121,7 +121,11 @@ export function resolveTransitive(fd: FD, fds: FD[], terminals: string[]): FD {
 			if (detFD) {
 				const resolvedFD = resolveTransitive({ dependent: [det], determinant: detFD.determinant }, fds, terminals);
 
-				resolvedFD.determinant.forEach((col) => out.determinant.push(col));
+				resolvedFD.determinant.forEach((col) => {
+					if (!out.determinant.includes(col)) {
+						out.determinant.push(col);
+					}
+				});
 			} else {
 				out.determinant.push(det);
 			}
@@ -136,14 +140,56 @@ export function resolveTransitive(fd: FD, fds: FD[], terminals: string[]): FD {
 export function filterRedundant<T>(tables: ITable<T>[]): ITable<T>[] {
 	const out: ITable<T>[] = [];
 
-	for (let i = 0; i < out.length - 1; i++) {
-		for (let j = i + 1; j < out.length; j++) {
-			if (tables[j].pkey.every((key) => tables[i].pkey.includes(key))) {
-				tables.splice(j, 1);
+	tables.forEach((table) => {
+		if (
+			!out.some(
+				(t) =>
+					table.pkey.every((key) => t.pkey.includes(key)) &&
+					table.names.filter((col) => !table.pkey.includes(col)).every((col) => t.names.includes(col))
+			)
+		) {
+			out.push(table);
+		}
+	});
+
+	return out;
+}
+
+export function join<T>(a: ITable<T>, b: ITable<T>): ITable<T> {
+	const cols = new Set<string>();
+	a.names.forEach((col) => cols.add(col));
+	b.names.forEach((col) => cols.add(col));
+
+	const intersection = a.names.filter((col) => b.names.includes(col));
+	const union = Array.from(cols);
+
+	const newTable = new Table<T>(union.slice(), {}, 0, -1, -1, union.slice());
+
+	for (let i = 0; i < a.length; i++) {
+		const aTuple = a.get(i);
+
+		for (let j = 0; j < b.length; j++) {
+			const bTuple = b.get(i);
+
+			if (intersection.every((col) => aTuple[col] === bTuple[col])) {
+				const newTuple = Object.fromEntries(union.map((col) => [col, col in aTuple ? aTuple[col] : bTuple[col]]));
+
+				newTable.insert([newTuple]);
 			}
 		}
 	}
 
-	return out;
+	newTable.crunch();
+	return newTable;
+}
+
+export function comb<T>(elems: T[]): T[][] {
+	if (elems.length === 1) {
+		return [[], [elems[0]]];
+	} else {
+		const combs = comb(elems.slice(1));
+
+		return combs.concat(combs.map((comb) => [elems[0], ...comb]));
+	}
 }
 

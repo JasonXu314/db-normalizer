@@ -70,5 +70,20 @@ export class Table<Data> implements ITable<Data> {
 			}
 		}
 	}
+
+	public project(to: string[]): Table<Data> {
+		const newTable = new Table<Data>(to.slice(), Object.fromEntries(to.map((col) => [col, []])), 0, -1, -1, to.slice());
+
+		for (let i = 0; i < this.length; i++) {
+			const tuple = this.get(i);
+
+			const newTuple = Object.fromEntries(to.map((col) => [col, tuple[col]]));
+
+			newTable.insert([newTuple]);
+		}
+
+		newTable.crunch();
+		return newTable;
+	}
 }
 

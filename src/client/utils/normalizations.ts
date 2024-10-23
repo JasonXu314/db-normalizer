@@ -1,13 +1,14 @@
 import { Table } from './Table';
-import { filterRedundant, resolveTransitive } from './utils';
+import { comb, filterRedundant, resolveTransitive } from './utils';
 
-export type NF = '1NF' | '2NF' | '3NF' | 'BCNF' | '4NF';
+export type NF = '1NF' | '2NF' | '3NF' | 'BCNF' | '4NF' | '5NF';
 
 export function normalize(tables: ITable<any>[], fds: FD[], mvds: FD[], to: '1NF'): NF1Table[];
 export function normalize(tables: ITable<any>[], fds: FD[], mvds: FD[], to: '2NF'): NF2Table[];
 export function normalize(tables: ITable<any>[], fds: FD[], mvds: FD[], to: '3NF'): NF3Table[];
 export function normalize(tables: ITable<any>[], fds: FD[], mvds: FD[], to: 'BCNF'): BCNFTable[];
 export function normalize(tables: ITable<any>[], fds: FD[], mvds: FD[], to: '4NF'): NF4Table[];
+export function normalize(tables: ITable<any>[], fds: FD[], mvds: FD[], to: '5NF'): NF5Table[];
 export function normalize(tables: ITable<any>[], fds: FD[], mvds: FD[], to: NF): ITable<any>[] {
 	switch (to) {
 		case '1NF':
@@ -20,6 +21,8 @@ export function normalize(tables: ITable<any>[], fds: FD[], mvds: FD[], to: NF):
 			return normalizeBCNF(normalize(tables, fds, mvds, '2NF'), fds, mvds);
 		case '4NF':
 			return normalize4NF(normalize(tables, fds, mvds, 'BCNF'), fds, mvds);
+		case '5NF':
+			return normalize5NF(normalize(tables, fds, mvds, '4NF'), fds, mvds);
 	}
 }
 
@@ -60,16 +63,15 @@ export function normalize2NF(tables: NF1Table[], fds: FD[], _: FD[]): NF2Table[]
 
 	tables.forEach((t) => {
 		const table = t.clone();
-		out.push(table);
 
 		fds.forEach((fd) => {
-			const resolvedFD = resolveTransitive(fd, fds, table.pkey);
+			const resolvedFD = resolveTransitive(fd, fds, table.names);
 
 			if (resolvedFD.determinant.every((col) => table.names.includes(col)) && !table.pkey.every((key) => resolvedFD.determinant.includes(key))) {
 				const newCols = resolvedFD.determinant.concat(resolvedFD.dependent.filter((col) => table.names.includes(col)));
 
 				const seen: string[] = [];
-				const newTable = new Table(newCols, {}, 0, -1, -1, resolvedFD.determinant.slice());
+				const newTable = new Table(newCols, Object.fromEntries(newCols.map((k) => [k, []])), 0, -1, -1, resolvedFD.determinant.slice());
 
 				for (let i = 0; i < table.length; i++) {
 					const tuple = table.get(i);
@@ -86,6 +88,7 @@ export function normalize2NF(tables: NF1Table[], fds: FD[], _: FD[]): NF2Table[]
 				newTable.crunch();
 				out.push(newTable);
 				resolvedFD.dependent.filter((col) => table.names.includes(col)).forEach((col) => table.removeCol(col));
+				console.log(newTable, table);
 			}
 		});
 	});
@@ -110,7 +113,7 @@ export function normalize3NF(tables: NF2Table[], fds: FD[], _: FD[]): NF3Table[]
 				const newCols = fd.determinant.concat(toRemove);
 
 				const seen: string[] = [];
-				const newTable: NF3Table = new Table(newCols, {}, 0, -1, -1, fd.determinant.slice());
+				const newTable: NF3Table = new Table(newCols, Object.fromEntries(newCols.map((k) => [k, []])), 0, -1, -1, fd.determinant.slice());
 
 				for (let i = 0; i < table.length; i++) {
 					const tuple = table.get(i);
@@ -151,7 +154,7 @@ export function normalizeBCNF(tables: NF2Table[] | NF3Table[], fds: FD[], _: FD[
 				const newCols = fd.determinant.concat(toRemove);
 
 				const seen: string[] = [];
-				const newTable: BCNFTable = new Table(newCols, {}, 0, -1, -1, fd.determinant.slice());
+				const newTable: BCNFTable = new Table(newCols, Object.fromEntries(newCols.map((k) => [k, []])), 0, -1, -1, fd.determinant.slice());
 
 				for (let i = 0; i < table.length; i++) {
 					const tuple = table.get(i);
@@ -195,7 +198,7 @@ export function normalize4NF(tables: BCNFTable[], _: FD[], mvds: FD[]): NF4Table
 				const newCols = mvd.determinant.concat(toRemove);
 
 				const seen: string[] = [];
-				const newTable: NF4Table = new Table(newCols, {}, 0, -1, -1, mvd.determinant.slice());
+				const newTable: NF4Table = new Table(newCols, Object.fromEntries(newCols.map((k) => [k, []])), 0, -1, -1, mvd.determinant.slice());
 
 				for (let i = 0; i < table.length; i++) {
 					const tuple = table.get(i);
@@ -214,6 +217,19 @@ export function normalize4NF(tables: BCNFTable[], _: FD[], mvds: FD[]): NF4Table
 				tables.push(newTable);
 			}
 		});
+	});
+
+	return out;
+}
+
+export function normalize5NF(tables: BCNFTable[], _: FD[], __: FD[]): NF4Table[] {
+	const out: BCNFTable[] = [];
+
+	tables.forEach((t) => {
+		const table = t.clone();
+		out.push(table);
+
+		console.log(table.names, comb(table.names));
 	});
 
 	return out;

@@ -18,7 +18,7 @@
 	&lbrace;
 	{#if value.length > 0}
 		<span>
-			<SubtleInput bind:value={value[0]} on:input={checkComma(0)} />
+			<SubtleInput bind:value={value[0]} on:input={checkComma(0)} on:paste />
 		</span>
 		{#each new Array(value.length - 1) as _, i}
 			<span>

@@ -6,7 +6,7 @@
 </script>
 
 <div class="row main">
-	<SetInput bind:value={fd.determinant} />
+	<SetInput bind:value={fd.determinant} on:paste />
 	{#if mvd}
 		<span>&twoheadrightarrow;</span>
 	{:else}

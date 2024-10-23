@@ -41,7 +41,12 @@
 	};
 
 	function selectTable(): void {
+		error = null;
+
 		if (tableNominees && startingTable) {
+			startingTable.names = startingTable.names.filter((col) => !!col);
+			startingTable.pkey = startingTable.pkey.filter((key) => !!key);
+
 			if (startingTable.pkey.length > 0) {
 				if (startingTable.pkey.every((key) => startingTable.names.includes(key))) {
 					tableNominees = null;
@@ -55,29 +60,123 @@
 			error = 'Select a starting table';
 		}
 	}
+
+	function pasteFDs(evt: ClipboardEvent, mvds: boolean): FD[] {
+		const raw = evt.clipboardData.getData('text');
+
+		return raw
+			.split('\n')
+			.map((ln) => ln.trim())
+			.filter((ln) => !!ln)
+			.flatMap((line) => {
+				const [determinant, dependent] = line.split(mvds ? /\-+>>/ : /\-+>/).map((part) => part.trim());
+
+				if (dependent === undefined && line.search(mvds ? /\-+>/ : /\-+>>/) !== -1) {
+					error = `Looks like you tried to paste in a ${mvds ? 'FD' : 'MVD'} in the ${mvds ? 'MVD' : 'FD'}s section`;
+					return [];
+				}
+
+				const fd: FD = { dependent: [], determinant: [] };
+
+				if (determinant.startsWith('{') && determinant.endsWith('}')) {
+					fd.determinant = determinant
+						.slice(1, -1)
+						.split(',')
+						.map((col) => col.trim());
+				} else {
+					fd.determinant.push(determinant);
+				}
+
+				if (dependent.startsWith('{')) {
+					if (dependent.endsWith('}')) {
+						fd.dependent = dependent
+							.slice(1, -1)
+							.split(',')
+							.map((col) => col.trim());
+					} else {
+						let idx = 1,
+							col = '';
+
+						while (dependent[idx] !== '}') {
+							// not going to consider edge cases because if u put {, ,}, you're really stupid
+							if (dependent[idx] === ',') {
+								fd.dependent.push(col.trim());
+								col = '';
+								idx++;
+							} else {
+								col += dependent[idx];
+								idx++;
+							}
+						}
+
+						if (col.trim() !== '') {
+							fd.dependent.push(col.trim());
+						}
+					}
+				} else {
+					if (!mvds) {
+						let idx = 0,
+							col = '';
+
+						while (dependent[idx].trim() !== '') {
+							col += dependent[idx];
+							idx++;
+						}
+
+						fd.dependent.push(col);
+					} else {
+						let idx = 0,
+							col = '';
+
+						while (dependent[idx].match(/[a-zA-Z\s|]/)) {
+							// not going to consider edge cases because if u put {, ,}, you're really stupid
+							if (dependent[idx] === '|') {
+								fd.dependent.push(col.trim());
+								col = '';
+								idx++;
+							} else {
+								col += dependent[idx];
+								idx++;
+							}
+						}
+
+						if (col.trim() !== '') {
+							fd.dependent.push(col.trim());
+						}
+					}
+				}
+
+				return [fd];
+			});
+	}
 </script>
+
+<svelte:head>
+	<title>DB Normalizer</title>
+</svelte:head>
 
 <input type="file" on:change={readFile} />
 
 {#if startingTable}
 	<DataTable table={startingTable} />
 
-	<div class="deps row">
-		<div class="fds">
-			<h2>Input FDs</h2>
-			{#each fds as fd}
-				<FDInput bind:fd />
-			{/each}
-			<button on:click={() => (fds = [...fds, { dependent: [''], determinant: [''] }])}>Add FD</button>
-		</div>
-		<div class="mvds">
-			<h2>Input MVDs</h2>
-			{#each mvds as fd}
-				<FDInput bind:fd mvd />
-			{/each}
-			<button on:click={() => (mvds = [...mvds, { dependent: [''], determinant: [''] }])}>Add MVD</button>
-		</div>
+	<div class="fds">
+		<h2>Input FDs</h2>
+		{#each fds as fd, i}
+			<FDInput bind:fd on:paste={(evt) => (fds = [...fds.slice(0, i), ...pasteFDs(evt, false), ...fds.slice(i + 1)])} />
+		{/each}
+		<button on:click={() => (fds = [...fds, { dependent: [''], determinant: [''] }])}>Add FD</button>
 	</div>
+	<div class="mvds">
+		<h2>Input MVDs</h2>
+		{#each mvds as fd, i}
+			<FDInput bind:fd on:paste={(evt) => (mvds = [...mvds.slice(0, i), ...pasteFDs(evt, true), ...mvds.slice(i + 1)])} mvd />
+		{/each}
+		<button on:click={() => (mvds = [...mvds, { dependent: [''], determinant: [''] }])}>Add MVD</button>
+	</div>
+	{#if error !== null}
+		<p class="error">{error}</p>
+	{/if}
 
 	<div class="btns row">
 		{#if normalizedTables !== null}
@@ -87,12 +186,13 @@
 			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '2NF'))}>2NF Normalization</button>
 			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '3NF'))}>3NF Normalization</button>
 			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, 'BCNF'))}>BCNF Normalization</button>
+			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '5NF'))}>5NF Normalization</button>
 		{/if}
 	</div>
 	{#if normalizedTables !== null}
 		<div class="controls row">
 			{#each normalizedTables as _, i}
-				<button on:click={() => (viewIdx = i)}>Table {i + 1}</button>
+				<button on:click={() => (viewIdx = i)} class:active={viewIdx === i}>Table {i + 1}</button>
 			{/each}
 		</div>
 		<DataTable table={normalizedTables[viewIdx]} />
@@ -127,6 +227,10 @@
 </dialog>
 
 <style>
+	dialog article {
+		max-width: 80%;
+	}
+
 	.table-choice {
 		width: 100%;
 		padding: 0.1em 0.2em;
@@ -140,8 +244,9 @@
 		align-items: center;
 	}
 
-	.deps {
-		margin-bottom: 0.5rem;
+	.fds,
+	.mvds {
+		margin-bottom: 1em;
 	}
 
 	.btns {
@@ -162,5 +267,9 @@
 		border-bottom-left-radius: 0;
 		border-bottom-right-radius: 0;
 		border-top-left-radius: 0;
+	}
+
+	button.active {
+		background-color: var(--primary-hover-background);
 	}
 </style>
