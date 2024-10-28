@@ -1,10 +1,13 @@
 <script lang="ts">
+	import { Engine } from '$lib/engine/engine';
+	import { SheetTable } from '$lib/engine/entities/SheetTable';
 	import { Workbook } from 'exceljs';
 	import { type ChangeEventHandler } from 'svelte/elements';
 	import DataTable from '../components/DataTable.svelte';
 	import FDInput from '../components/FDInput.svelte';
 	import SetInput from '../components/SetInput.svelte';
-	import { normalize } from '../utils/normalizations';
+	import { normalize, type NF } from '../utils/normalizations';
+	import { Table } from '../utils/Table';
 	import { readSheet } from '../utils/utils';
 
 	let tableNominees: NF0Table[] | null = null,
@@ -13,7 +16,10 @@
 		fds: FD[] = [],
 		mvds: FD[] = [],
 		normalizedTables: NF1Table[] | null = null,
-		viewIdx: number = 0;
+		viewIdx: number = 0,
+		canvas: HTMLCanvasElement | null = null,
+		engines: Engine[],
+		askLoad: boolean = typeof window !== 'undefined' && localStorage.getItem('start-table') !== null;
 
 	const readFile: ChangeEventHandler<HTMLInputElement> = (evt) => {
 		const files = (evt.target as HTMLInputElement).files;
@@ -150,7 +156,53 @@
 			});
 	}
 
+	function clearOutputs(): void {
+		normalizedTables = null;
+		viewIdx = 0;
+
+		engines.forEach((engine) => engine.stop());
+		engines = [];
+	}
+
+	function normalizeTo<T extends NF>(nf: T): () => void {
+		return () => {
+			// no clue why TS complains on the nf argument here
+			normalizedTables = normalize([startingTable], fds, mvds, nf as any);
+
+			engines = normalizedTables.map((table) => {
+				const engine = new Engine(canvas!);
+				const sheetTable = new SheetTable(engine, table);
+
+				engine.add(sheetTable, 0);
+
+				return engine;
+			});
+
+			engines[viewIdx].start();
+		};
+	}
+
+	function viewTable(idx: number): void {
+		engines[viewIdx].stop();
+		engines[idx].start();
+		viewIdx = idx;
+	}
+
+	function loadPrev(): void {
+		askLoad = false;
+
+		const { cols, length, names, pkey, sc, sr } = JSON.parse(localStorage.getItem('start-table'));
+
+		startingTable = new Table<DBPrimitive | DBPrimitive[]>(names, cols, length, sr, sc, pkey);
+		fds = JSON.parse(localStorage.getItem('fds') ?? '[]');
+		mvds = JSON.parse(localStorage.getItem('mvds') ?? '[]');
+	}
+
 	$: console.log(normalizedTables);
+
+	$: if (typeof window !== 'undefined' && startingTable !== null) localStorage.setItem('start-table', JSON.stringify(startingTable));
+	$: if (typeof window !== 'undefined' && fds.length > 0) localStorage.setItem('fds', JSON.stringify(fds));
+	$: if (typeof window !== 'undefined' && mvds.length > 0) localStorage.setItem('mvds', JSON.stringify(mvds));
 </script>
 
 <svelte:head>
@@ -182,28 +234,29 @@
 
 	<div class="btns row">
 		{#if normalizedTables !== null}
-			<button on:click={() => ((normalizedTables = null), (viewIdx = 0))}>Clear</button>
+			<button on:click={clearOutputs}>Clear</button>
 		{:else}
-			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '1NF'))}>1NF</button>
-			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '2NF'))}>2NF</button>
-			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '3NF'))}>3NF</button>
-			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, 'BCNF'))}>BCNF</button>
-			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '4NF'))}>4NF</button>
-			<button on:click={() => (normalizedTables = normalize([startingTable], fds, mvds, '5NF'))}>5NF</button>
+			<button on:click={normalizeTo('1NF')}>1NF</button>
+			<button on:click={normalizeTo('2NF')}>2NF</button>
+			<button on:click={normalizeTo('3NF')}>3NF</button>
+			<button on:click={normalizeTo('BCNF')}>BCNF</button>
+			<button on:click={normalizeTo('4NF')}>4NF</button>
+			<button on:click={normalizeTo('5NF')}>5NF</button>
 		{/if}
 	</div>
 	{#if normalizedTables !== null}
 		<div class="controls row">
 			{#each normalizedTables as _, i}
-				<button on:click={() => (viewIdx = i)} class:active={viewIdx === i}>Table {i + 1}</button>
+				<button on:click={() => viewTable(i)} class:active={() => viewTable(i)}>Table {i + 1}</button>
 			{/each}
 		</div>
-		<DataTable table={normalizedTables[viewIdx]} />
+		<!-- <DataTable table={normalizedTables[viewIdx]} /> -->
 	{/if}
+	<canvas style={normalizedTables === null ? 'display: none;' : ''} bind:this={canvas} height={800} width={1200}></canvas>
 {/if}
 
 <dialog open={tableNominees !== null}>
-	<article>
+	<article class="big">
 		<header>
 			<h1>Select Starting Table</h1>
 		</header>
@@ -229,8 +282,20 @@
 	</article>
 </dialog>
 
+<dialog open={askLoad}>
+	<article>
+		<header>
+			<h1>Load Previous Tables/FDs/MVDs?</h1>
+		</header>
+		<div class="row">
+			<button on:click={loadPrev} class="success">Yes</button>
+			<button on:click={() => (askLoad = false)} class="error">No</button>
+		</div>
+	</article>
+</dialog>
+
 <style>
-	dialog article {
+	dialog article.big {
 		max-width: 80%;
 	}
 

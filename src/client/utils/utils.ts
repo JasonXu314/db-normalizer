@@ -74,6 +74,8 @@ export function readSheet(sheet: Worksheet): NF0Table[] {
 									val = items.every((item) => !Number.isNaN(parseFloat(item))) ? items.map((item) => parseFloat(item)) : items;
 								} else if (typeof rawVal === 'number') {
 									val = rawVal;
+								} else if (rawVal instanceof Date) {
+									val = rawVal.toDateString();
 								} else {
 									val = rawVal.toString();
 									if (val === 'NONE') val = [];
