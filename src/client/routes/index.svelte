@@ -6,12 +6,14 @@
 	import DataTable from '../components/DataTable.svelte';
 	import FDInput from '../components/FDInput.svelte';
 	import SetInput from '../components/SetInput.svelte';
+	import TableInput from '../components/TableInput.svelte';
 	import { normalize, type NF } from '../utils/normalizations';
 	import { Table } from '../utils/Table';
-	import { readSheet } from '../utils/utils';
+	import { parseCell, readSheet, regularizeMVA } from '../utils/utils';
 
 	let tableNominees: NF0Table[] | null = null,
 		startingTable: NF0Table | null = null,
+		freeFormTable: ITable<string> = new Table<string>([''], { '': [''] }, 0, -1, -1, ['']),
 		error: string | null = null,
 		fds: FD[] = [],
 		mvds: FD[] = [],
@@ -198,6 +200,15 @@
 		mvds = JSON.parse(localStorage.getItem('mvds') ?? '[]');
 	}
 
+	function useFreeForm(): void {
+		const table = freeFormTable as NF0Table;
+
+		table.names.forEach((col) => (table.cols[col] = table.cols[col].map((val) => parseCell(val as string))));
+		regularizeMVA(table);
+
+		startingTable = table;
+	}
+
 	$: console.log(normalizedTables);
 
 	$: if (typeof window !== 'undefined' && startingTable !== null) localStorage.setItem('start-table', JSON.stringify(startingTable));
@@ -208,8 +219,6 @@
 <svelte:head>
 	<title>DB Normalizer</title>
 </svelte:head>
-
-<input type="file" on:change={readFile} />
 
 {#if startingTable}
 	<DataTable table={startingTable} />
@@ -250,9 +259,20 @@
 				<button on:click={() => viewTable(i)} class:active={() => viewTable(i)}>Table {i + 1}</button>
 			{/each}
 		</div>
-		<!-- <DataTable table={normalizedTables[viewIdx]} /> -->
 	{/if}
 	<canvas style={normalizedTables === null ? 'display: none;' : ''} bind:this={canvas} height={800} width={1200}></canvas>
+{:else}
+	<div class="row input-options">
+		<div>
+			<h1>Input Excel File</h1>
+			<input type="file" on:change={readFile} />
+		</div>
+		<div>
+			<h1>Free-Form Table Entry</h1>
+			<TableInput bind:table={freeFormTable} />
+			<button on:click={useFreeForm}>Start</button>
+		</div>
+	</div>
 {/if}
 
 <dialog open={tableNominees !== null}>
@@ -293,6 +313,10 @@
 		</div>
 	</article>
 </dialog>
+
+<div class="footer">
+	Repo: <a href="https://github.com/JasonXu314/db-normalizer">https://github.com/JasonXu314/db-normalizer</a>
+</div>
 
 <style>
 	dialog article.big {
@@ -339,5 +363,16 @@
 
 	button.active {
 		background-color: var(--primary-hover-background);
+	}
+
+	.input-options {
+		padding: 1rem 2rem;
+		justify-content: space-between;
+	}
+
+	.footer {
+		position: fixed;
+		bottom: 0;
+		right: 0;
 	}
 </style>

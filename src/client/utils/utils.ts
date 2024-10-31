@@ -1,4 +1,4 @@
-import type { Cell, Row, Worksheet } from 'exceljs';
+import type { Cell, CellValue, Row, Worksheet } from 'exceljs';
 import { Table } from './Table';
 
 export function getRows(sheet: any): Row[] {
@@ -11,6 +11,30 @@ export function getCells(row: any): Cell[] {
 
 export function isTableCell(cell: Cell): boolean {
 	return cell.border && (cell.border.top || cell.border.right || cell.border.bottom || cell.border.left) !== undefined;
+}
+
+export function parseCell(val: CellValue): DBPrimitive | DBPrimitive[] {
+	if (typeof val === 'string' && val.trim().startsWith('{') && val.trim().endsWith('}')) {
+		const items = val.trim().slice(1, -1).split(/,\s*/);
+
+		return items.every((item) => !Number.isNaN(parseFloat(item))) ? items.map((item) => parseFloat(item)) : items;
+	} else if (typeof val === 'number') {
+		return val;
+	} else if (val instanceof Date) {
+		return val.toDateString();
+	} else if (val.toString() === 'NONE') {
+		return [];
+	} else {
+		return val.toString();
+	}
+}
+
+export function regularizeMVA<T>(table: ITable<T>): void {
+	for (const name of table.names) {
+		if (table.cols[name].some((val) => Array.isArray(val))) {
+			table.cols[name] = table.cols[name].map((val) => (Array.isArray(val) ? val : [val])) as T[];
+		}
+	}
 }
 
 export function readSheet(sheet: Worksheet): NF0Table[] {
@@ -55,8 +79,7 @@ export function readSheet(sheet: Worksheet): NF0Table[] {
 						const val = row[j].value;
 						const name = typeof val === 'string' ? val : val.toString();
 
-						table.cols[name] = [];
-						table.names.push(name);
+						table.addCol(name, []);
 					}
 
 					for (let r = i + 1; rows[r] && isTableCell(getCells(rows[r])[sx]); r++) {
@@ -66,22 +89,7 @@ export function readSheet(sheet: Worksheet): NF0Table[] {
 							const rawVal = row[c].value;
 
 							try {
-								let val: DBPrimitive | DBPrimitive[];
-
-								if (typeof rawVal === 'string' && rawVal.trim().startsWith('{') && rawVal.trim().endsWith('}')) {
-									const items = rawVal.trim().slice(1, -1).split(/,\s*/);
-
-									val = items.every((item) => !Number.isNaN(parseFloat(item))) ? items.map((item) => parseFloat(item)) : items;
-								} else if (typeof rawVal === 'number') {
-									val = rawVal;
-								} else if (rawVal instanceof Date) {
-									val = rawVal.toDateString();
-								} else {
-									val = rawVal.toString();
-									if (val === 'NONE') val = [];
-								}
-
-								table.cols[table.names[c - sx]].push(val);
+								table.cols[table.names[c - sx]].push(parseCell(rawVal));
 							} catch (e) {
 								console.log(row);
 								console.log('err with', rawVal, 'at', r, c);
@@ -92,12 +100,7 @@ export function readSheet(sheet: Worksheet): NF0Table[] {
 						table.length++;
 					}
 
-					// regularize multivalued attributes
-					for (const name of table.names) {
-						if (table.cols[name].some((val) => Array.isArray(val))) {
-							table.cols[name] = table.cols[name].map((val) => (Array.isArray(val) ? val : [val]));
-						}
-					}
+					regularizeMVA(table);
 
 					tables.push(table);
 					if (table.length > maxLen) maxLen = table.length + 1;
