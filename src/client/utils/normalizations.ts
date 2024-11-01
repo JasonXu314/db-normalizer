@@ -300,7 +300,7 @@ export function normalize5NF(tables: BCNFTable[], _: FD[], __: FD[]): NF4Table[]
 			}
 		}
 
-		if (bestPartition !== null) {
+		if (bestPartition !== null && bestSize < table.length * table.names.length) {
 			// console.log('best', bestPartition);
 			out.push(...bestPartition);
 		} else {
