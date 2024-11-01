@@ -169,7 +169,7 @@ export function join<T>(a: ITable<T>, b: ITable<T>): ITable<T> {
 	const intersection = a.names.filter((col) => b.names.includes(col));
 	const union = Array.from(cols);
 
-	const newTable = new Table<T>(union.slice(), Object.fromEntries(union.map((col) => [col, []])), 0, -1, -1, union.slice());
+	const newTable = new Table<T>(union.slice(), Object.fromEntries(union.map((col) => [col, []])), 0, -1, -1, intersection.slice());
 
 	for (let i = 0; i < a.length; i++) {
 		const aTuple = a.get(i);

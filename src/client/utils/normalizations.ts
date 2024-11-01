@@ -233,49 +233,57 @@ export function normalize5NF(tables: BCNFTable[], _: FD[], __: FD[]): NF4Table[]
 				const remaining = table.names.filter((col) => !common.includes(col));
 
 				for (const [a, b] of partition(remaining)) {
-					const aTable = new Table(common.concat(a), Object.fromEntries(common.concat(a).map((col) => [col, []])), 0, -1, -1, common.slice());
-					const bTable = new Table(common.concat(b), Object.fromEntries(common.concat(b).map((col) => [col, []])), 0, -1, -1, common.slice());
+					if (a.length > 0 && b.length > 0) {
+						const aTable = new Table(common.concat(a), Object.fromEntries(common.concat(a).map((col) => [col, []])), 0, -1, -1, common.slice());
+						const bTable = new Table(common.concat(b), Object.fromEntries(common.concat(b).map((col) => [col, []])), 0, -1, -1, common.slice());
 
-					for (let i = 0; i < table.length; i++) {
-						const tuple = table.get(i);
+						for (let i = 0; i < table.length; i++) {
+							const tuple = table.get(i);
 
-						const aTuple = Object.fromEntries(aTable.names.map((col) => [col, tuple[col]]));
-						const bTuple = Object.fromEntries(bTable.names.map((col) => [col, tuple[col]]));
+							const aTuple = Object.fromEntries(aTable.names.map((col) => [col, tuple[col]]));
+							const bTuple = Object.fromEntries(bTable.names.map((col) => [col, tuple[col]]));
 
-						aTable.insert([aTuple]);
-						bTable.insert([bTuple]);
-					}
+							aTable.insert([aTuple]);
+							bTable.insert([bTuple]);
+						}
 
-					aTable.crunch();
-					bTable.crunch();
+						aTable.crunch();
+						bTable.crunch();
 
-					const joined = join(aTable, bTable);
+						console.log('partition:', a, b);
+						console.log('tables:', aTable, bTable);
 
-					if (joined.length === table.length) {
-						let match = true;
+						const joined = join(aTable, bTable);
+						console.log(joined);
 
-						for (let i = 0; i < joined.length; i++) {
-							const joinedTuple = joined.get(i);
-							let found = false;
+						if (joined.length === table.length) {
+							let match = true;
 
-							for (let j = 0; j < joined.length; j++) {
-								const originalTuple = table.get(j);
+							for (let i = 0; i < joined.length; i++) {
+								const joinedTuple = joined.get(i);
+								let found = false;
 
-								if (table.names.every((col) => joinedTuple[col] === originalTuple[col])) {
-									found = true;
+								for (let j = 0; j < joined.length; j++) {
+									const originalTuple = table.get(j);
+
+									if (table.names.every((col) => joinedTuple[col] === originalTuple[col])) {
+										found = true;
+										break;
+									}
+								}
+
+								if (!found) {
+									match = false;
+									console.log('no match for tuple', joinedTuple);
 									break;
 								}
 							}
 
-							if (!found) {
-								match = false;
-								break;
+							if (match) {
+								console.log('matched for', common, a, b);
+								out.push(aTable, bTable);
+								return;
 							}
-						}
-
-						if (match) {
-							out.push(aTable, bTable);
-							return;
 						}
 					}
 				}

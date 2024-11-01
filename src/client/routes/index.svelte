@@ -168,6 +168,9 @@
 
 	function normalizeTo<T extends NF>(nf: T): () => void {
 		return () => {
+			localStorage.setItem('fds', JSON.stringify(fds));
+			localStorage.setItem('mvds', JSON.stringify(mvds));
+
 			// no clue why TS complains on the nf argument here
 			normalizedTables = normalize([startingTable], fds, mvds, nf as any);
 

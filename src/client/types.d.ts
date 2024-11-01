@@ -13,7 +13,7 @@ interface ITable<Data> {
 	removeCol(name: string): void;
 	addCol(name: string, values: Data[]): void;
 	addKeyCol(name: string, values: Data[]): void;
-	crunch(): void;
+	crunch(prime?: boolean): void;
 }
 
 type DBPrimitive = string | number;

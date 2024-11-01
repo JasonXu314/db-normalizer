@@ -61,11 +61,12 @@ export class Table<Data> implements ITable<Data> {
 		this.pkey.push(name);
 	}
 
-	public crunch(): void {
+	public crunch(prime: boolean = true): void {
 		for (let i = 0; i < this.length - 1; i++) {
 			for (let j = i + 1; j < this.length; j++) {
-				if (this.pkey.every((colName) => this.cols[colName][i] === this.cols[colName][j])) {
+				if ((prime ? this.pkey : this.names).every((colName) => this.cols[colName][i] === this.cols[colName][j])) {
 					this.remove(j);
+					this.length--;
 				}
 			}
 		}
