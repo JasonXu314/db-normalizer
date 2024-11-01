@@ -67,6 +67,7 @@ export class Table<Data> implements ITable<Data> {
 				if ((prime ? this.pkey : this.names).every((colName) => this.cols[colName][i] === this.cols[colName][j])) {
 					this.remove(j);
 					this.length--;
+					j--;
 				}
 			}
 		}

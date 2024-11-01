@@ -228,20 +228,26 @@ export function normalize5NF(tables: BCNFTable[], _: FD[], __: FD[]): NF4Table[]
 	tables.forEach((t) => {
 		const table = t.clone();
 
+		let bestPartition = null,
+			bestSize = Infinity;
+
 		for (const common of comb(table.names)) {
 			if (table.names.length - common.length >= 2) {
 				const remaining = table.names.filter((col) => !common.includes(col));
 
 				for (const [a, b] of partition(remaining)) {
 					if (a.length > 0 && b.length > 0) {
-						const aTable = new Table(common.concat(a), Object.fromEntries(common.concat(a).map((col) => [col, []])), 0, -1, -1, common.slice());
-						const bTable = new Table(common.concat(b), Object.fromEntries(common.concat(b).map((col) => [col, []])), 0, -1, -1, common.slice());
+						const aKeys = common.concat(a);
+						const bKeys = common.concat(b);
+
+						const aTable = new Table(aKeys, Object.fromEntries(aKeys.map((col) => [col, []])), 0, -1, -1, aKeys.slice());
+						const bTable = new Table(bKeys, Object.fromEntries(bKeys.map((col) => [col, []])), 0, -1, -1, bKeys.slice());
 
 						for (let i = 0; i < table.length; i++) {
 							const tuple = table.get(i);
 
-							const aTuple = Object.fromEntries(aTable.names.map((col) => [col, tuple[col]]));
-							const bTuple = Object.fromEntries(bTable.names.map((col) => [col, tuple[col]]));
+							const aTuple = Object.fromEntries(aKeys.map((col) => [col, tuple[col]]));
+							const bTuple = Object.fromEntries(bKeys.map((col) => [col, tuple[col]]));
 
 							aTable.insert([aTuple]);
 							bTable.insert([bTuple]);
@@ -250,7 +256,7 @@ export function normalize5NF(tables: BCNFTable[], _: FD[], __: FD[]): NF4Table[]
 						aTable.crunch();
 						bTable.crunch();
 
-						console.log('partition:', a, b);
+						console.log('partition:', common, a, b);
 						console.log('tables:', aTable, bTable);
 
 						const joined = join(aTable, bTable);
@@ -281,8 +287,12 @@ export function normalize5NF(tables: BCNFTable[], _: FD[], __: FD[]): NF4Table[]
 
 							if (match) {
 								console.log('matched for', common, a, b);
-								out.push(aTable, bTable);
-								return;
+								const size = aTable.length * aTable.names.length + bTable.length * bTable.names.length;
+
+								if (size < bestSize) {
+									bestPartition = [aTable, bTable];
+									bestSize = size;
+								}
 							}
 						}
 					}
@@ -290,7 +300,12 @@ export function normalize5NF(tables: BCNFTable[], _: FD[], __: FD[]): NF4Table[]
 			}
 		}
 
-		out.push(table);
+		if (bestPartition !== null) {
+			console.log('best', bestPartition);
+			out.push(...bestPartition);
+		} else {
+			out.push(table);
+		}
 	});
 
 	return out;

@@ -169,13 +169,13 @@ export function join<T>(a: ITable<T>, b: ITable<T>): ITable<T> {
 	const intersection = a.names.filter((col) => b.names.includes(col));
 	const union = Array.from(cols);
 
-	const newTable = new Table<T>(union.slice(), Object.fromEntries(union.map((col) => [col, []])), 0, -1, -1, intersection.slice());
+	const newTable = new Table<T>(union.slice(), Object.fromEntries(union.map((col) => [col, []])), 0, -1, -1, union.slice());
 
 	for (let i = 0; i < a.length; i++) {
 		const aTuple = a.get(i);
 
 		for (let j = 0; j < b.length; j++) {
-			const bTuple = b.get(i);
+			const bTuple = b.get(j);
 
 			if (intersection.every((col) => aTuple[col] === bTuple[col])) {
 				const newTuple = Object.fromEntries(union.map((col) => [col, col in aTuple ? aTuple[col] : bTuple[col]]));
