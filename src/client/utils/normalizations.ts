@@ -256,11 +256,11 @@ export function normalize5NF(tables: BCNFTable[], _: FD[], __: FD[]): NF4Table[]
 						aTable.crunch();
 						bTable.crunch();
 
-						console.log('partition:', common, a, b);
-						console.log('tables:', aTable, bTable);
+						// console.log('partition:', common, a, b);
+						// console.log('tables:', aTable, bTable);
 
 						const joined = join(aTable, bTable);
-						console.log(joined);
+						// console.log(joined);
 
 						if (joined.length === table.length) {
 							let match = true;
@@ -280,13 +280,13 @@ export function normalize5NF(tables: BCNFTable[], _: FD[], __: FD[]): NF4Table[]
 
 								if (!found) {
 									match = false;
-									console.log('no match for tuple', joinedTuple);
+									// console.log('no match for tuple', joinedTuple);
 									break;
 								}
 							}
 
 							if (match) {
-								console.log('matched for', common, a, b);
+								// console.log('matched for', common, a, b);
 								const size = aTable.length * aTable.names.length + bTable.length * bTable.names.length;
 
 								if (size < bestSize) {
@@ -301,7 +301,7 @@ export function normalize5NF(tables: BCNFTable[], _: FD[], __: FD[]): NF4Table[]
 		}
 
 		if (bestPartition !== null) {
-			console.log('best', bestPartition);
+			// console.log('best', bestPartition);
 			out.push(...bestPartition);
 		} else {
 			out.push(table);
