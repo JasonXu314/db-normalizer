@@ -374,5 +374,6 @@
 		position: fixed;
 		bottom: 0;
 		right: 0;
+		margin: 0.5em 1em;
 	}
 </style>

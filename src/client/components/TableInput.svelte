@@ -18,9 +18,9 @@
 		const to = table.names.find((col) => !(col in table.cols));
 
 		if (table.names.reduce((count, col) => (col === to ? count + 1 : count), 0) === 1 && from !== undefined && to !== undefined) {
+			console.log('from', from, 'to', to, table.names, table.cols);
 			table.cols[to] = table.cols[from];
 			delete table.cols[from];
-			table.names.splice(table.names.indexOf(from), 1, to);
 		}
 	}
 
@@ -67,7 +67,7 @@
 		<tbody>
 			{#each listenRerender(new Array(table.length), _) as __, i}
 				<tr>
-					{#each table.names as colName}
+					{#each listenRerender(table.names, _) as colName}
 						<td>
 							<SubtleInput bind:value={table.cols[colName][i]} />
 						</td>
