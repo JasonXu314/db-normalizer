@@ -232,7 +232,7 @@ export function normalize5NF(tables: BCNFTable[], _: FD[], __: FD[]): NF4Table[]
 			bestSize = Infinity;
 
 		for (const common of comb(table.names)) {
-			if (table.names.length - common.length >= 2) {
+			if (table.names.length - common.length >= 2 && common.length >= 1) {
 				const remaining = table.names.filter((col) => !common.includes(col));
 
 				for (const [a, b] of partition(remaining)) {
@@ -308,6 +308,6 @@ export function normalize5NF(tables: BCNFTable[], _: FD[], __: FD[]): NF4Table[]
 		}
 	});
 
-	return out;
+	return filterRedundant(out);
 }
 
